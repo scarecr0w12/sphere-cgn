@@ -32,24 +32,45 @@ class ServerInfoCog(commands.Cog):
             server_info = await api.get_server_info()
             server_metrics = await api.get_server_metrics()
             
-            embed = discord.Embed(title=f"{server_info.get('servername', server)}", description=f"{server_info.get('description', 'N/A')}", color=discord.Color.blurple())
-            embed.add_field(name="Players", value=f"{server_metrics.get('currentplayernum', 'N/A')}/{server_metrics.get('maxplayernum', 'N/A')}", inline=True)
-            embed.add_field(name="Version", value=server_info.get('version', 'N/A'), inline=True)
-            embed.add_field(name="Days Passed", value=server_metrics.get('days', 'N/A'), inline=True)
+            # Debug logging to see actual API response
+            logging.info(f"Server info response type: {type(server_info)}, value: {server_info}")
+            logging.info(f"Server metrics response type: {type(server_metrics)}, value: {server_metrics}")
+            
+            # Handle case where API might return None or empty dict
+            if not server_info:
+                server_info = {}
+            if not server_metrics:
+                server_metrics = {}
+            
+            # Try both snake_case and camelCase key names
+            server_name = server_info.get('servername') or server_info.get('serverName') or server_info.get('name') or server
+            description = server_info.get('description') or server_info.get('Description') or 'N/A'
+            version = server_info.get('version') or server_info.get('Version') or 'N/A'
+            world_guid = server_info.get('worldguid') or server_info.get('worldGuid') or server_info.get('WorldGUID') or 'N/A'
+            
+            current_players = server_metrics.get('currentplayernum') or server_metrics.get('currentPlayerNum') or server_metrics.get('currentPlayers') or 'N/A'
+            max_players = server_metrics.get('maxplayernum') or server_metrics.get('maxPlayerNum') or server_metrics.get('maxPlayers') or 'N/A'
+            days = server_metrics.get('days') or server_metrics.get('Days') or 'N/A'
+            uptime = server_metrics.get('uptime') or server_metrics.get('Uptime')
+            fps = server_metrics.get('serverfps') or server_metrics.get('serverFps') or server_metrics.get('fps') or server_metrics.get('FPS') or 'N/A'
+            frametime = server_metrics.get('serverframetime') or server_metrics.get('serverFrameTime') or server_metrics.get('frametime') or server_metrics.get('FrameTime')
+            
+            embed = discord.Embed(title=f"{server_name}", description=f"{description}", color=discord.Color.blurple())
+            embed.add_field(name="Players", value=f"{current_players}/{max_players}", inline=True)
+            embed.add_field(name="Version", value=version, inline=True)
+            embed.add_field(name="Days Passed", value=days, inline=True)
             
             # Handle uptime calculation safely
-            uptime = server_metrics.get('uptime')
             uptime_str = f"{int(uptime / 60)} minutes" if uptime is not None and isinstance(uptime, (int, float)) else 'N/A'
             embed.add_field(name="Uptime", value=uptime_str, inline=True)
             
-            embed.add_field(name="FPS", value=server_metrics.get('serverfps', 'N/A'), inline=True)
+            embed.add_field(name="FPS", value=fps, inline=True)
             
             # Handle latency calculation safely
-            frametime = server_metrics.get('serverframetime')
             latency_str = f"{frametime:.2f} ms" if frametime is not None and isinstance(frametime, (int, float)) else 'N/A'
             embed.add_field(name="Latency", value=latency_str, inline=True)
             
-            embed.add_field(name="WorldGUID", value=f"`{server_info.get('worldguid', 'N/A')}`", inline=False)
+            embed.add_field(name="WorldGUID", value=f"`{world_guid}`", inline=False)
             embed.set_thumbnail(url=c.SPHERE_THUMBNAIL)
             
             await interaction.followup.send(embed=embed)
