@@ -75,9 +75,19 @@ class ServerQueryCog(commands.Cog):
         embed.add_field(name="Players", value=f"{server_metrics.get('currentplayernum', 'N/A')}/{server_metrics.get('maxplayernum', 'N/A')}", inline=True)
         embed.add_field(name="Version", value=server_info.get('version', 'N/A'), inline=True)
         embed.add_field(name="Days Passed", value=server_metrics.get('days', 'N/A'), inline=True)
-        embed.add_field(name="Uptime", value=f"{int(server_metrics.get('uptime', 'N/A') / 60)} minutes", inline=True)
+        
+        # Handle uptime calculation safely
+        uptime = server_metrics.get('uptime')
+        uptime_str = f"{int(uptime / 60)} minutes" if uptime is not None and isinstance(uptime, (int, float)) else 'N/A'
+        embed.add_field(name="Uptime", value=uptime_str, inline=True)
+        
         embed.add_field(name="FPS", value=server_metrics.get('serverfps', 'N/A'), inline=True)
-        embed.add_field(name="Latency", value=f"{server_metrics.get('serverframetime', 'N/A'):.2f} ms", inline=True)
+        
+        # Handle latency calculation safely
+        frametime = server_metrics.get('serverframetime')
+        latency_str = f"{frametime:.2f} ms" if frametime is not None and isinstance(frametime, (int, float)) else 'N/A'
+        embed.add_field(name="Latency", value=latency_str, inline=True)
+        
         embed.add_field(name="WorldGUID", value=f"`{server_info.get('worldguid', 'N/A')}`", inline=False)
         embed.set_thumbnail(url=c.SPHERE_THUMBNAIL)
         return embed
