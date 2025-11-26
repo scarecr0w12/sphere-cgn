@@ -1,31 +1,19 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.database import fetch_server_details, server_autocomplete
+from utils.database import server_autocomplete
 from utils.bans import (
     fetch_bans,
     log_ban,
     clear_bans
 )
-from palworld_api import PalworldAPI
+from utils.apiutility import get_api_instance
 import logging
 import io
 
 class AdminCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-    async def get_api_instance(self, guild_id, server_name):
-        server_config = await fetch_server_details(guild_id, server_name)
-        if not server_config:
-            return None, f"Server '{server_name}' configuration not found."
-        
-        host = server_config[2]
-        password = server_config[3]
-        api_port = server_config[4]
-        
-        api = PalworldAPI(f"http://{host}:{api_port}", password)
-        return api, None
 
     async def server_autocomplete(self, interaction: discord.Interaction, current: str):
         guild_id = interaction.guild.id
@@ -41,7 +29,7 @@ class AdminCog(commands.Cog):
     async def kick_player(self, interaction: discord.Interaction, server: str, player_id: str, reason: str):
         await interaction.response.defer(thinking=True, ephemeral=True)
         try:
-            api, error = await self.get_api_instance(interaction.guild.id, server)
+            api, error = await get_api_instance(interaction.guild.id, server)
             if error:
                 await interaction.followup.send(error, ephemeral=True)
                 return
@@ -60,7 +48,7 @@ class AdminCog(commands.Cog):
     async def ban_player(self, interaction: discord.Interaction, server: str, player_id: str, reason: str):
         await interaction.response.defer(thinking=True, ephemeral=True)
         try:
-            api, error = await self.get_api_instance(interaction.guild.id, server)
+            api, error = await get_api_instance(interaction.guild.id, server)
             if error:
                 await interaction.followup.send(error, ephemeral=True)
                 return
@@ -80,7 +68,7 @@ class AdminCog(commands.Cog):
     async def unban_player(self, interaction: discord.Interaction, server: str, player_id: str):
         await interaction.response.defer(thinking=True, ephemeral=True)
         try:
-            api, error = await self.get_api_instance(interaction.guild.id, server)
+            api, error = await get_api_instance(interaction.guild.id, server)
             if error:
                 await interaction.followup.send(error, ephemeral=True)
                 return

@@ -1,8 +1,9 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from utils.database import server_autocomplete, fetch_server_details
-from palworld_api import PalworldAPI
+from utils.database import server_autocomplete
+from utils.apiutility import get_api_instance
+import utils.constants as c
 import logging
 
 class ServerInfoCog(commands.Cog):
@@ -23,17 +24,11 @@ class ServerInfoCog(commands.Cog):
     async def server_info(self, interaction: discord.Interaction, server: str):
         await interaction.response.defer(thinking=True, ephemeral=True)
         try:
-            guild_id = interaction.guild.id
-            server_config = await fetch_server_details(guild_id, server)
-            if not server_config:
-                await interaction.followup.send(f"Server '{server}' configuration not found.", ephemeral=True)
+            api, error = await get_api_instance(interaction.guild.id, server)
+            if error:
+                await interaction.followup.send(error, ephemeral=True)
                 return
             
-            host = server_config[2]
-            password = server_config[3]
-            api_port = server_config[4]
-            
-            api = PalworldAPI(f"http://{host}:{api_port}", password)
             server_info = await api.get_server_info()
             server_metrics = await api.get_server_metrics()
             
@@ -45,7 +40,7 @@ class ServerInfoCog(commands.Cog):
             embed.add_field(name="FPS", value=server_metrics.get('serverfps', 'N/A'), inline=True)
             embed.add_field(name="Latency", value=f"{server_metrics.get('serverframetime', 'N/A'):.2f} ms", inline=True)
             embed.add_field(name="WorldGUID", value=f"`{server_info.get('worldguid', 'N/A')}`", inline=False)
-            embed.set_thumbnail(url="https://www.palbot.gg/images/rexavatar.png")
+            embed.set_thumbnail(url=c.SPHERE_THUMBNAIL)
             
             await interaction.followup.send(embed=embed)
         except Exception as e:

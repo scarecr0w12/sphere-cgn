@@ -1,6 +1,7 @@
 import aiosqlite
 import os
 import datetime
+import logging
 
 DATABASE_PATH = os.path.join('data', 'palworld.db')
 
@@ -45,7 +46,7 @@ async def initialize_db():
             PRIMARY KEY (guild_id, server_name)
         )""",
         """CREATE TABLE IF NOT EXISTS bans (
-            player_id TEXT NOT NULL,
+            player_id TEXT PRIMARY KEY,
             reason TEXT NOT NULL,
             timestamp DEFAULT CURRENT_TIMESTAMP
         )""",
@@ -88,6 +89,11 @@ async def initialize_db():
             total_time INTEGER NOT NULL DEFAULT 0,
             session_start TIMESTAMP,
             last_session INTEGER NOT NULL DEFAULT 0
+        )""",
+        """CREATE TABLE IF NOT EXISTS kits (
+            kit_name TEXT PRIMARY KEY,
+            commands TEXT NOT NULL,
+            description TEXT NOT NULL
         )"""
     ]
     conn = await db_connection()
@@ -97,7 +103,8 @@ async def initialize_db():
             await cursor.execute(command)
         try:
             await cursor.execute("ALTER TABLE servers ADD COLUMN rcon_port INTEGER")
-        except:
+        except aiosqlite.OperationalError:
+            # Column already exists, ignore
             pass
         await conn.commit()
         await conn.close()
@@ -392,6 +399,49 @@ async def get_player_session(user_id: str):
         row = await cursor.fetchone()
         await conn.close()
         return row
+
+# Kit Management
+async def get_kit(kit_name: str):
+    conn = await db_connection()
+    if conn is not None:
+        cursor = await conn.cursor()
+        await cursor.execute("SELECT commands, description FROM kits WHERE kit_name = ?", (kit_name,))
+        kit = await cursor.fetchone()
+        await conn.close()
+        return kit
+    return None
+
+async def save_kit(kit_name: str, commands_data: str, desc: str):
+    conn = await db_connection()
+    if conn is not None:
+        cursor = await conn.cursor()
+        await cursor.execute("""
+            INSERT INTO kits (kit_name, commands, description)
+            VALUES (?, ?, ?)
+            ON CONFLICT(kit_name) DO UPDATE
+            SET commands=excluded.commands,
+                description=excluded.description
+        """, (kit_name, commands_data, desc))
+        await conn.commit()
+        await conn.close()
+
+async def delete_kit(kit_name: str):
+    conn = await db_connection()
+    if conn is not None:
+        cursor = await conn.cursor()
+        await cursor.execute("DELETE FROM kits WHERE kit_name = ?", (kit_name,))
+        await conn.commit()
+        await conn.close()
+
+async def get_all_kit_names(current: str = ""):
+    conn = await db_connection()
+    if conn is not None:
+        cursor = await conn.cursor()
+        await cursor.execute("SELECT kit_name FROM kits WHERE kit_name LIKE ?", (f"%{current}%",))
+        rows = await cursor.fetchall()
+        await conn.close()
+        return [row[0] for row in rows]
+    return []
 
 if __name__ == "__main__":
     import asyncio

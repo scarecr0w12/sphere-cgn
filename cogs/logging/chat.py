@@ -91,8 +91,8 @@ class ChatCog(commands.Cog):
                 async with aiohttp.ClientSession() as session:
                     await session.post(webhook_url, json={"username": f"{username} ({server_name})", "content": message})
                     await asyncio.sleep(1)
-        except:
-            pass
+        except Exception as e:
+            logging.error(f"Error processing and sending chat message: {e}")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

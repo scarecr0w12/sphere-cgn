@@ -8,11 +8,6 @@ class RconCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.rcon = RconUtility()
-        self.servers = []
-        bot.loop.create_task(self.load_servers())
-
-    async def load_servers(self):
-        self.servers = []
 
     async def get_server_info(self, guild_id: int, server_name: str):
         details = await fetch_server_details(guild_id, server_name)

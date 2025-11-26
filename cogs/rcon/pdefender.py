@@ -10,15 +10,10 @@ class PalDefenderCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.rcon = RconUtility()
-        self.servers = []
         self.pals = []
         self.items = []
         self.load_pals()
         self.load_items()
-        bot.loop.create_task(self.load_servers())
-
-    async def load_servers(self):
-        self.servers = []
 
     def load_pals(self):
         path = os.path.join("gamedata", "pals.json")
