@@ -36,7 +36,38 @@ class ServerInfoCog(commands.Cog):
             logging.info(f"Server info response: {repr(server_info)}")
             logging.info(f"Server metrics response: {repr(server_metrics)}")
             
-            # Handle case where API might return None or error response
+            # Check for error responses (palworld-api returns {'error': '...'} on failure)
+            if isinstance(server_info, dict) and 'error' in server_info:
+                error_msg = server_info.get('error', 'Unknown error')
+                await interaction.followup.send(
+                    f"**Connection Error:** {error_msg}\n\n"
+                    f"Please verify:\n"
+                    f"• Server IP/Host is correct\n"
+                    f"• REST API Port is correct (default: 8212)\n"
+                    f"• Admin Password is correct\n"
+                    f"• REST API is enabled in your Palworld server settings\n"
+                    f"• Server is running and accessible",
+                    ephemeral=True
+                )
+                logging.error(f"API returned error for server_info: {error_msg}")
+                return
+                
+            if isinstance(server_metrics, dict) and 'error' in server_metrics:
+                error_msg = server_metrics.get('error', 'Unknown error')
+                await interaction.followup.send(
+                    f"**Connection Error:** {error_msg}\n\n"
+                    f"Please verify:\n"
+                    f"• Server IP/Host is correct\n"
+                    f"• REST API Port is correct (default: 8212)\n"
+                    f"• Admin Password is correct\n"
+                    f"• REST API is enabled in your Palworld server settings\n"
+                    f"• Server is running and accessible",
+                    ephemeral=True
+                )
+                logging.error(f"API returned error for server_metrics: {error_msg}")
+                return
+            
+            # Handle case where API might return None
             if server_info is None:
                 await interaction.followup.send("Failed to retrieve server info from API. Please check your server configuration and ensure the REST API is enabled.", ephemeral=True)
                 logging.error("API returned None for server_info")

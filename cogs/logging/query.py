@@ -42,6 +42,14 @@ class ServerQueryCog(commands.Cog):
                         server_metrics = await api.get_server_metrics()
                         player_list = await api.get_player_list()
 
+                        # Skip if API returned errors
+                        if isinstance(server_info, dict) and 'error' in server_info:
+                            logging.warning(f"Skipping query update for {server_name}: API error - {server_info.get('error')}")
+                            continue
+                        if isinstance(server_metrics, dict) and 'error' in server_metrics:
+                            logging.warning(f"Skipping query update for {server_name}: API error - {server_metrics.get('error')}")
+                            continue
+
                         server_embed = self.create_server_embed(server_name, server_info, server_metrics)
                         player_embed = self.create_player_embed(player_list)
 
@@ -67,6 +75,29 @@ class ServerQueryCog(commands.Cog):
                         logging.error(f"Error updating query server: '{server_name}': {str(e)}")
 
     def create_server_embed(self, server_name, server_info, server_metrics):
+        # Handle error responses
+        if isinstance(server_info, dict) and 'error' in server_info:
+            embed = discord.Embed(
+                title=f"{server_name} - Connection Error",
+                description=f"Unable to connect to server API: {server_info.get('error')}",
+                color=discord.Color.red()
+            )
+            return embed
+            
+        if isinstance(server_metrics, dict) and 'error' in server_metrics:
+            embed = discord.Embed(
+                title=f"{server_name} - Connection Error",
+                description=f"Unable to connect to server API: {server_metrics.get('error')}",
+                color=discord.Color.red()
+            )
+            return embed
+        
+        # Ensure we have dicts
+        if not isinstance(server_info, dict):
+            server_info = {}
+        if not isinstance(server_metrics, dict):
+            server_metrics = {}
+            
         embed = discord.Embed(
             title=f"{server_info.get('servername', server_name)}",
             description=f"{server_info.get('description', 'N/A')}",
@@ -129,6 +160,31 @@ class ServerQueryCog(commands.Cog):
             server_info = await api.get_server_info()
             server_metrics = await api.get_server_metrics()
             player_list = await api.get_player_list()
+
+            # Check for API errors
+            if isinstance(server_info, dict) and 'error' in server_info:
+                await interaction.followup.send(
+                    f"**Connection Error:** {server_info.get('error')}\n\n"
+                    f"Please verify your server configuration:\n"
+                    f"• Server IP/Host: `{host}`\n"
+                    f"• REST API Port: `{api_port}`\n"
+                    f"• Admin Password is correct\n"
+                    f"• REST API is enabled in server settings",
+                    ephemeral=True
+                )
+                return
+                
+            if isinstance(server_metrics, dict) and 'error' in server_metrics:
+                await interaction.followup.send(
+                    f"**Connection Error:** {server_metrics.get('error')}\n\n"
+                    f"Please verify your server configuration:\n"
+                    f"• Server IP/Host: `{host}`\n"
+                    f"• REST API Port: `{api_port}`\n"
+                    f"• Admin Password is correct\n"
+                    f"• REST API is enabled in server settings",
+                    ephemeral=True
+                )
+                return
 
             server_embed = self.create_server_embed(server, server_info, server_metrics)
             player_embed = self.create_player_embed(player_list)
