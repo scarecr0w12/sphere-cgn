@@ -24,6 +24,17 @@ class NullPlayerCheck(commands.Cog):
             try:
                 api = PalworldAPI(f"http://{host}:{api_port}", password)
                 player_list = await api.get_player_list()
+                
+                # Check for API errors
+                if isinstance(player_list, dict) and 'error' in player_list:
+                    logging.warning(f"API error for '{server_name}': {player_list.get('error')}")
+                    continue
+                
+                # Ensure player_list has the expected structure
+                if not isinstance(player_list, dict) or 'players' not in player_list:
+                    logging.warning(f"Unexpected player_list format for '{server_name}': {type(player_list)}")
+                    continue
+                
                 for player in player_list['players']:
                     playerid = player['userId']
                     if "null_" in playerid:

@@ -29,11 +29,24 @@ class PlayersCog(commands.Cog):
                 return
             
             player_list = await api.get_player_list()
-            if player_list and 'players' in player_list:
+            
+            # Check for API errors
+            if isinstance(player_list, dict) and 'error' in player_list:
+                await interaction.followup.send(
+                    f"**Connection Error:** {player_list.get('error')}\n\n"
+                    f"Please verify your server configuration:\n"
+                    f"• Server IP/Host and REST API Port are correct\n"
+                    f"• Admin Password is correct\n"
+                    f"• REST API is enabled in server settings",
+                    ephemeral=True
+                )
+                return
+            
+            if player_list and isinstance(player_list, dict) and 'players' in player_list:
                 embed = self.playerlist_embed(server, player_list['players'])
                 await interaction.followup.send(embed=embed, ephemeral=True)
             else:
-                await interaction.followup.send(f"No players found on server '{server}'.", ephemeral=True)
+                await interaction.followup.send(f"No players found on server '{server}' or invalid API response.", ephemeral=True)
                 logging.info(f"No players found on server '{server}'.")
         except Exception as e:
             await interaction.followup.send(f"An unexpected error occurred: {str(e)}", ephemeral=True)

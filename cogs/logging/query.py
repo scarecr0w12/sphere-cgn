@@ -124,6 +124,24 @@ class ServerQueryCog(commands.Cog):
         return embed
 
     def create_player_embed(self, player_list):
+        # Handle error responses
+        if isinstance(player_list, dict) and 'error' in player_list:
+            embed = discord.Embed(
+                title="Players - Connection Error",
+                description=f"Unable to retrieve player list: {player_list.get('error')}",
+                color=discord.Color.red()
+            )
+            return embed
+        
+        # Ensure we have a dict with players
+        if not isinstance(player_list, dict) or 'players' not in player_list:
+            embed = discord.Embed(
+                title="Players",
+                description="Unable to retrieve player list (invalid response format)",
+                color=discord.Color.orange()
+            )
+            return embed
+        
         player_names = "\n".join([f"{player['name']}({player['accountName']}) - {player['userId']}" for player in player_list['players']])
         embed = discord.Embed(
             title="Players",

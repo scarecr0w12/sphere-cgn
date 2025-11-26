@@ -35,6 +35,20 @@ class PlayerLoggingCog(commands.Cog):
             try:
                 api = PalworldAPI(f"http://{host}:{api_port}", password)
                 player_list = await api.get_player_list()
+                
+                # Check for API errors
+                if isinstance(player_list, dict) and 'error' in player_list:
+                    if server_name in self.server_online_cache:
+                        await track_sessions(set(), self.server_online_cache[server_name], now)
+                        del self.server_online_cache[server_name]
+                    logging.warning(f"API error for '{server_name}': {player_list.get('error')}")
+                    continue
+                
+                # Ensure player_list has the expected structure
+                if not isinstance(player_list, dict) or 'players' not in player_list:
+                    logging.warning(f"Unexpected player_list format for '{server_name}': {type(player_list)}")
+                    continue
+                
                 current_online = set(player['userId'] for player in player_list['players'])
                 previous_online = self.server_online_cache.get(server_name, set())
                 self.server_online_cache[server_name] = current_online
