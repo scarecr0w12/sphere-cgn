@@ -32,28 +32,86 @@ class ServerInfoCog(commands.Cog):
             server_info = await api.get_server_info()
             server_metrics = await api.get_server_metrics()
             
-            # Debug logging to see actual API response
-            logging.info(f"Server info response type: {type(server_info)}, value: {server_info}")
-            logging.info(f"Server metrics response type: {type(server_metrics)}, value: {server_metrics}")
+            # Debug logging to see actual API response - use repr to see full structure
+            logging.info(f"Server info response: {repr(server_info)}")
+            logging.info(f"Server metrics response: {repr(server_metrics)}")
             
-            # Handle case where API might return None or empty dict
-            if not server_info:
-                server_info = {}
-            if not server_metrics:
-                server_metrics = {}
+            # Handle case where API might return None or error response
+            if server_info is None:
+                await interaction.followup.send("Failed to retrieve server info from API. Please check your server configuration and ensure the REST API is enabled.", ephemeral=True)
+                logging.error("API returned None for server_info")
+                return
+                
+            if server_metrics is None:
+                await interaction.followup.send("Failed to retrieve server metrics from API. Please check your server configuration and ensure the REST API is enabled.", ephemeral=True)
+                logging.error("API returned None for server_metrics")
+                return
+            
+            # Convert to dict if it's not already (might be a response object)
+            if not isinstance(server_info, dict):
+                # Try to get dict from response object
+                if hasattr(server_info, '__dict__'):
+                    server_info = server_info.__dict__
+                elif hasattr(server_info, 'data'):
+                    server_info = server_info.data
+                elif hasattr(server_info, 'json'):
+                    server_info = await server_info.json() if hasattr(server_info, 'json') else {}
+                else:
+                    logging.error(f"Server info is not a dict and can't be converted, it's {type(server_info)}: {repr(server_info)}")
+                    await interaction.followup.send(f"Unexpected API response format. Check logs for details.", ephemeral=True)
+                    return
+                
+            if not isinstance(server_metrics, dict):
+                # Try to get dict from response object
+                if hasattr(server_metrics, '__dict__'):
+                    server_metrics = server_metrics.__dict__
+                elif hasattr(server_metrics, 'data'):
+                    server_metrics = server_metrics.data
+                elif hasattr(server_metrics, 'json'):
+                    server_metrics = await server_metrics.json() if hasattr(server_metrics, 'json') else {}
+                else:
+                    logging.error(f"Server metrics is not a dict and can't be converted, it's {type(server_metrics)}: {repr(server_metrics)}")
+                    await interaction.followup.send(f"Unexpected API response format. Check logs for details.", ephemeral=True)
+                    return
+            
+            # Log all available keys to help debug
+            if isinstance(server_info, dict):
+                logging.info(f"Server info keys: {list(server_info.keys())}")
+                logging.info(f"Server info full content: {server_info}")
+            if isinstance(server_metrics, dict):
+                logging.info(f"Server metrics keys: {list(server_metrics.keys())}")
+                logging.info(f"Server metrics full content: {server_metrics}")
+            
+            # If dicts are empty, show debug info to user
+            if isinstance(server_info, dict) and isinstance(server_metrics, dict):
+                if not server_info or not server_metrics:
+                    info_keys = list(server_info.keys()) if server_info else "Empty"
+                    metrics_keys = list(server_metrics.keys()) if server_metrics else "Empty"
+                    debug_msg = (
+                        f"**Debug Info:**\n"
+                        f"Server Info Keys: {info_keys}\n"
+                        f"Server Metrics Keys: {metrics_keys}\n"
+                        f"Server Info: {server_info}\n"
+                        f"Server Metrics: {server_metrics}"
+                    )
+                    # Truncate if too long
+                    if len(debug_msg) > 2000:
+                        debug_msg = debug_msg[:1900] + "... (truncated)"
+                    await interaction.followup.send(f"```\n{debug_msg}\n```", ephemeral=True)
+                    return
             
             # Try both snake_case and camelCase key names
-            server_name = server_info.get('servername') or server_info.get('serverName') or server_info.get('name') or server
+            server_name = server_info.get('servername') or server_info.get('serverName') or server_info.get('name') or server_info.get('ServerName') or server
             description = server_info.get('description') or server_info.get('Description') or 'N/A'
             version = server_info.get('version') or server_info.get('Version') or 'N/A'
-            world_guid = server_info.get('worldguid') or server_info.get('worldGuid') or server_info.get('WorldGUID') or 'N/A'
+            world_guid = server_info.get('worldguid') or server_info.get('worldGuid') or server_info.get('WorldGUID') or server_info.get('worldGUID') or 'N/A'
             
-            current_players = server_metrics.get('currentplayernum') or server_metrics.get('currentPlayerNum') or server_metrics.get('currentPlayers') or 'N/A'
-            max_players = server_metrics.get('maxplayernum') or server_metrics.get('maxPlayerNum') or server_metrics.get('maxPlayers') or 'N/A'
+            current_players = server_metrics.get('currentplayernum') or server_metrics.get('currentPlayerNum') or server_metrics.get('currentPlayers') or server_metrics.get('CurrentPlayerNum') or 'N/A'
+            max_players = server_metrics.get('maxplayernum') or server_metrics.get('maxPlayerNum') or server_metrics.get('maxPlayers') or server_metrics.get('MaxPlayerNum') or 'N/A'
             days = server_metrics.get('days') or server_metrics.get('Days') or 'N/A'
             uptime = server_metrics.get('uptime') or server_metrics.get('Uptime')
-            fps = server_metrics.get('serverfps') or server_metrics.get('serverFps') or server_metrics.get('fps') or server_metrics.get('FPS') or 'N/A'
-            frametime = server_metrics.get('serverframetime') or server_metrics.get('serverFrameTime') or server_metrics.get('frametime') or server_metrics.get('FrameTime')
+            fps = server_metrics.get('serverfps') or server_metrics.get('serverFps') or server_metrics.get('fps') or server_metrics.get('FPS') or server_metrics.get('ServerFPS') or 'N/A'
+            frametime = server_metrics.get('serverframetime') or server_metrics.get('serverFrameTime') or server_metrics.get('frametime') or server_metrics.get('FrameTime') or server_metrics.get('ServerFrameTime')
             
             embed = discord.Embed(title=f"{server_name}", description=f"{description}", color=discord.Color.blurple())
             embed.add_field(name="Players", value=f"{current_players}/{max_players}", inline=True)
