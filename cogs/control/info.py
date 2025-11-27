@@ -43,7 +43,7 @@ class ServerInfoCog(commands.Cog):
                     f"**Connection Error:** {error_msg}\n\n"
                     f"Please verify:\n"
                     f"• Server IP/Host is correct\n"
-                    f"• REST API Port is correct (default: 8212)\n"
+                    f"• REST API Port is correct\n"
                     f"• Admin Password is correct\n"
                     f"• REST API is enabled in your Palworld server settings\n"
                     f"• Server is running and accessible",
@@ -58,7 +58,7 @@ class ServerInfoCog(commands.Cog):
                     f"**Connection Error:** {error_msg}\n\n"
                     f"Please verify:\n"
                     f"• Server IP/Host is correct\n"
-                    f"• REST API Port is correct (default: 8212)\n"
+                    f"• REST API Port is correct\n"
                     f"• Admin Password is correct\n"
                     f"• REST API is enabled in your Palworld server settings\n"
                     f"• Server is running and accessible",
